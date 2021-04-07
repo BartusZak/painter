@@ -18,7 +18,7 @@ class Painter extends StatefulWidget {
 }
 
 class _PainterState extends State<Painter> {
-  bool _finished;
+  late bool _finished;
 
   @override
   void initState() {
@@ -27,7 +27,7 @@ class _PainterState extends State<Painter> {
     widget.painterController._widgetFinish = _finish;
   }
 
-  Size _finish() {
+  Size? _finish() {
     setState(() {
       _finished = true;
     });
@@ -60,31 +60,31 @@ class _PainterState extends State<Painter> {
   void _onPanStart(DragStartDetails start) {
     Offset pos = (context.findRenderObject() as RenderBox)
         .globalToLocal(start.globalPosition);
-    widget.painterController._pathHistory.add(pos);
+    widget.painterController._pathHistory!.add(pos);
     widget.painterController._notifyListeners();
   }
 
   void _onPanUpdate(DragUpdateDetails update) {
     Offset pos = (context.findRenderObject() as RenderBox)
         .globalToLocal(update.globalPosition);
-    widget.painterController._pathHistory.updateCurrent(pos);
+    widget.painterController._pathHistory!.updateCurrent(pos);
     widget.painterController._notifyListeners();
   }
 
   void _onPanEnd(DragEndDetails end) {
-    widget.painterController._pathHistory.endCurrent();
+    widget.painterController._pathHistory!.endCurrent();
     widget.painterController._notifyListeners();
   }
 }
 
 class _PainterPainter extends CustomPainter {
-  final _PathHistory _path;
+  final _PathHistory? _path;
 
-  _PainterPainter(this._path, {Listenable repaint}) : super(repaint: repaint);
+  _PainterPainter(this._path, {Listenable? repaint}) : super(repaint: repaint);
 
   @override
   void paint(Canvas canvas, Size size) {
-    _path.draw(canvas, size);
+    _path!.draw(canvas, size);
   }
 
   @override
@@ -94,15 +94,15 @@ class _PainterPainter extends CustomPainter {
 }
 
 class _PathHistory {
-  List<MapEntry<Path, Paint>> _paths;
-  Paint currentPaint;
-  Paint _backgroundPaint;
-  bool _inDrag;
+  late List<MapEntry<Path, Paint?>> _paths;
+  Paint? currentPaint;
+  late Paint _backgroundPaint;
+  late bool _inDrag;
 
   bool get isEmpty => _paths.isEmpty || (_paths.length == 1 && _inDrag);
 
   _PathHistory() {
-    _paths = new List<MapEntry<Path, Paint>>();
+    _paths = <MapEntry<Path, Paint>>[];
     _inDrag = false;
     _backgroundPaint = new Paint()..blendMode = BlendMode.dstOver;
   }
@@ -128,7 +128,7 @@ class _PathHistory {
       _inDrag = true;
       Path path = new Path();
       path.moveTo(startPoint.dx, startPoint.dy);
-      _paths.add(new MapEntry<Path, Paint>(path, currentPaint));
+      _paths.add(new MapEntry<Path, Paint?>(path, currentPaint));
     }
   }
 
@@ -145,8 +145,8 @@ class _PathHistory {
 
   void draw(Canvas canvas, Size size) {
     canvas.saveLayer(Offset.zero & size, Paint());
-    for (MapEntry<Path, Paint> path in _paths) {
-      Paint p = path.value;
+    for (MapEntry<Path, Paint?> path in _paths) {
+      Paint p = path.value!;
       canvas.drawPath(path.key, p);
     }
     canvas.drawRect(
@@ -170,7 +170,7 @@ class PictureDetails {
 
   Future<Uint8List> toPNG() async {
     final image = await toImage();
-    return (await image.toByteData(format: ImageByteFormat.png))
+    return (await image.toByteData(format: ImageByteFormat.png))!
         .buffer
         .asUint8List();
   }
@@ -182,15 +182,15 @@ class PainterController extends ChangeNotifier {
   bool _eraseMode = false;
 
   double _thickness = 1.0;
-  PictureDetails _cached;
-  _PathHistory _pathHistory;
-  ValueGetter<Size> _widgetFinish;
+  PictureDetails? _cached;
+  _PathHistory? _pathHistory;
+  late ValueGetter<Size?> _widgetFinish;
 
   PainterController() {
     _pathHistory = new _PathHistory();
   }
 
-  bool get isEmpty => _pathHistory.isEmpty;
+  bool get isEmpty => _pathHistory!.isEmpty;
 
   bool get eraseMode => _eraseMode;
 
@@ -230,14 +230,14 @@ class PainterController extends ChangeNotifier {
     }
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = thickness;
-    _pathHistory.currentPaint = paint;
-    _pathHistory.setBackgroundColor(backgroundColor);
+    _pathHistory!.currentPaint = paint;
+    _pathHistory!.setBackgroundColor(backgroundColor);
     notifyListeners();
   }
 
   void undo() {
     if (!isFinished()) {
-      _pathHistory.undo();
+      _pathHistory!.undo();
       notifyListeners();
     }
   }
@@ -248,14 +248,14 @@ class PainterController extends ChangeNotifier {
 
   void clear() {
     if (!isFinished()) {
-      _pathHistory.clear();
+      _pathHistory!.clear();
       notifyListeners();
     }
   }
 
-  PictureDetails finish() {
+  PictureDetails? finish() {
     if (!isFinished()) {
-      _cached = _render(_widgetFinish());
+      _cached = _render(_widgetFinish()!);
     }
     return _cached;
   }
@@ -263,7 +263,7 @@ class PainterController extends ChangeNotifier {
   PictureDetails _render(Size size) {
     PictureRecorder recorder = new PictureRecorder();
     Canvas canvas = new Canvas(recorder);
-    _pathHistory.draw(canvas, size);
+    _pathHistory!.draw(canvas, size);
     return new PictureDetails(
         recorder.endRecording(), size.width.floor(), size.height.floor());
   }
